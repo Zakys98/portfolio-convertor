@@ -26,7 +26,7 @@ def main() -> None:
     with open("./test.json", "w") as output_file:
         json.dump(
             {
-                "buys:": reader.dump_buys_to_json(),
+                "buys": reader.dump_buys_to_json(),
                 "sells": reader.dump_sells_to_json(),
                 "deposits": reader.deposits,
             },
