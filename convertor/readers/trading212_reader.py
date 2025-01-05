@@ -12,10 +12,10 @@ class Trading212Reader(Reader[Trading212Stock]):
             for row in reader:
                 action = row.get("Action", "")
                 stock = Trading212Stock.from_dict(row)
-                if action == "Market buy":
+                if action == "Market buy" or action == "Limit buy":
                     self._buys.append(stock)
                     continue
-                if action == "Market sell":
+                if action == "Market sell" or action == "Limit sell":
                     self._sells.append(stock)
                     continue
                 if action == "Deposit":
