@@ -1,4 +1,9 @@
 from abc import ABC, abstractmethod
+from typing import TypeVar
+
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class Reader[T](ABC):
@@ -25,10 +30,8 @@ class Reader[T](ABC):
     def read(self, input_file: str) -> None:
         pass
 
-    @abstractmethod
     def dump_buys_to_json(self) -> list[dict[str, str | float]]:
-        pass
+        return [stock.model_dump() for stock in self._buys]
 
-    @abstractmethod
     def dump_sells_to_json(self) -> list[dict[str, str | float]]:
-        pass
+        return [stock.model_dump() for stock in self._sells]

@@ -1,27 +1,35 @@
+from datetime import datetime
 from typing import Self
 
-from pydantic import BaseModel
-
 from convertor.currency import Currency
+from .stock import Stock
 
 
-class Trading212Stock(BaseModel):
-    ticker: str
+class Trading212Stock(Stock):
     name: str
-    quantity: float
-    share_price: float
-    currency: Currency
-    total_price: float
+    currency_order: Currency
+    exchange_rate: float
 
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> Self:
         return cls(
-            ticker=data.get("Ticker", ""),
-            name=data.get("Name", ""),
-            quantity=float(number) if (number := data.get("No. of shares")) else -1,
-            share_price=float(number) if (number := data.get("Price / share")) else -1,
-            currency=(
-                Currency(curr) if (curr := data.get("Currency (Result)", "")) else Currency("USD")
+            ticker=data.get("Ticker"),
+            name=data.get("Name"),
+            time=datetime.strptime(data.get("Time").split(" ")[0], "%Y-%m-%d").strftime("%Y%m%d"),
+            quantity=float(number) if (number := data.get("No. of shares")) else -1.0,
+            share_price=float(number) if (number := data.get("Price / share")) else -1.0,
+            currency_main=(
+                Currency(curr)
+                if (curr := data.get("Currency (Price / share)"))
+                else Currency("USD")
             ),
-            total_price=float(number) if (number := data.get("Total")) else -1,
+            currency_order=(
+                Currency(curr) if (curr := data.get("Currency (Result)")) else Currency("USD")
+            ),
+            exchange_rate=(
+                float(number)
+                if ((number := data.get("Exchange rate")) and number != "Not available")
+                else 1.0
+            ),
+            total_price=float(number) if (number := data.get("Total")) else -1.0,
         )
