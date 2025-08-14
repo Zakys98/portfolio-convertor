@@ -5,9 +5,9 @@ import csv
 import json
 import os.path
 
-from .readers.trading212_reader import Trading212Reader
-from .readers.xtb_reader import XtbReader
-from .constants import YAHOO_EXPORT
+from convertor.readers.trading212_reader import Trading212Reader
+from convertor.readers.xtb_reader import XtbReader
+from convertor.constants import YAHOO_EXPORT
 
 
 def arg_parser_init() -> Namespace:
