@@ -6,6 +6,11 @@ Supported brokers input files are:
     - Trading212
     - XTB
 
+## Requirements
+
+- Python3
+
+
 ## Run
 
 ```bash

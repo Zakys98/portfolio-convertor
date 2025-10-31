@@ -13,7 +13,7 @@ from convertor.constants import YAHOO_EXPORT
 def arg_parser_init() -> Namespace:
     parser = ArgumentParser("Portfolio convertor")
     parser.add_argument("-i", "--input", type=str, required=True, help="Input file")
-    parser.add_argument("-o", "--output", type=str, default="./output.json", help="Output file")
+    parser.add_argument("-o", "--output", type=str, default="./output", help="Output file")
     parser.add_argument(
         "--yahoo", help="Yahoo finance input format, output file is csv", action="store_true"
     )
