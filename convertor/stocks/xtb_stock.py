@@ -10,7 +10,7 @@ class XtbStock(Stock):
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> Self:
         quantity, share_price = (
-            data.get("Comment")
+            data.get("Comment", "")
             .removeprefix("OPEN BUY")
             .removeprefix("CLOSE BUY")
             .replace("@", "")

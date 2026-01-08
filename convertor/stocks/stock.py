@@ -12,7 +12,7 @@ class Stock(BaseModel):
     currency_main: Currency
     total_price: float
 
-    def to_yahoo(self) -> dict[str, str]:
+    def to_yahoo(self) -> dict[str, str | float | int]:
         return {
             YAHOO_EXPORT.SYMBOL: self.ticker,
             YAHOO_EXPORT.TRADE_DATE: self.time,

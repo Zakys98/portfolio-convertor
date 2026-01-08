@@ -13,15 +13,21 @@ from convertor.constants import YAHOO_EXPORT
 def arg_parser_init() -> Namespace:
     parser = ArgumentParser("Portfolio convertor")
     parser.add_argument("-i", "--input", type=str, required=True, help="Input file")
-    parser.add_argument("-o", "--output", type=str, default="./output", help="Output file")
     parser.add_argument(
-        "--yahoo", help="Yahoo finance input format, output file is csv", action="store_true"
+        "-o", "--output", type=str, default="./output", help="Output file"
+    )
+    parser.add_argument(
+        "--yahoo",
+        help="Yahoo finance input format, output file is csv",
+        action="store_true",
     )
     group = parser.add_argument_group(
         "Broker input file", "Select the broker for the input file"
     )
     exclusive_group = group.add_mutually_exclusive_group(required=True)
-    exclusive_group.add_argument("--t212", help="Trading212 input file", action="store_true")
+    exclusive_group.add_argument(
+        "--t212", help="Trading212 input file", action="store_true"
+    )
     exclusive_group.add_argument("--xtb", help="XTB input file", action="store_true")
     return parser.parse_args()
 
