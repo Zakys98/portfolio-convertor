@@ -1,18 +1,29 @@
 # Portfolio Convertor
 
-This tool converts broker output files to the Yahoo format.
-Simply provide your broker's exported file, and the script will generate a compatible file for Yahoo Finance import.
-Supported brokers input files are:
-    - Trading212
-    - XTB
+**Convert broker exports to standard format or Yahoo Finance format**
 
-## Requirements
+This utility bridges the gap between your brokerage data and Yahoo Finance. It converts CSV exports from supported brokers into a standard or Yahoo-compatible schema.
 
-- Python3
+**Supported brokers**:
+- Trading212
+- XTB
 
+## Prerequisites
+
+- Python: 3.13 or higher
+- uv: Fast Python package manager ([Installation Guide](https://github.com/astral-sh/uv))
+
+## Installation
+
+Clone the repository and set up the environment using uv:
+```bash
+uv venv
+uv sync
+```
 
 ## Run
 
+Run the script by specifying your input file, desired output name, and the broker type.
 ```bash
 python3 main.py --input t212_export.csv --output yahoo_import.csv --t212 --yahoo
 ```
