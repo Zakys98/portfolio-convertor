@@ -1,5 +1,7 @@
 .vscode/
 inputs/
 __pycache__/
+dist/
+*.egg-info/
 .venv/
 .python-version

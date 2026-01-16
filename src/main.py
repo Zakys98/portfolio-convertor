@@ -5,6 +5,7 @@ import csv
 import json
 import os.path
 
+from convertor.readers.reader import Reader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
 from convertor.constants import YAHOO_EXPORT
@@ -32,6 +33,23 @@ def arg_parser_init() -> Namespace:
     return parser.parse_args()
 
 
+def yahoo_output(output_file: str, reader: Reader) -> None:
+    previous_stocks = []
+
+    if os.path.exists(output_file):
+        with open(output_file, "r") as file:
+            csv_reader = csv.DictReader(file, YAHOO_EXPORT.to_list())
+            previous_stocks = [row for row in csv_reader][1:]
+
+    with open(output_file, "w+") as file:
+        writer = csv.DictWriter(file, YAHOO_EXPORT.to_list())
+        writer.writeheader()
+        if previous_stocks:
+            writer.writerows(previous_stocks)
+        writer.writerows([stock.to_yahoo() for stock in reader.buys])
+        writer.writerows([stock.to_yahoo() for stock in reader.sells])
+
+
 def main() -> None:
     args = arg_parser_init()
     if args.t212:
@@ -39,26 +57,13 @@ def main() -> None:
     elif args.xtb:
         reader = XtbReader()
     else:
-        raise RuntimeError("Not supported yet")
+        print("Not supported yet")
+        return
 
     reader.read(args.input)
 
     if args.yahoo:
-        previous_stocks = []
-
-        if os.path.exists(args.output):
-            with open(args.output, "r") as file:
-                csv_reader = csv.DictReader(file, YAHOO_EXPORT.to_list())
-                previous_stocks = [row for row in csv_reader][1:]
-
-        with open(args.output, "w+") as file:
-            writer = csv.DictWriter(file, YAHOO_EXPORT.to_list())
-            writer.writeheader()
-            if previous_stocks:
-                writer.writerows(previous_stocks)
-            writer.writerows([stock.to_yahoo() for stock in reader.buys])
-            writer.writerows([stock.to_yahoo() for stock in reader.sells])
-
+        yahoo_output(args.output, reader)
         return
 
     with open(args.output, "w") as output_file:
