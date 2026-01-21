@@ -1,19 +1,39 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser, Namespace
+import argparse
 import csv
 import json
-import os.path
+from pathlib import Path
 
 from convertor.readers.reader import Reader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
 from convertor.constants import YAHOO_EXPORT
+from convertor.store import Store
 
 
-def arg_parser_init() -> Namespace:
-    parser = ArgumentParser("Portfolio convertor")
-    parser.add_argument("-i", "--input", type=str, required=True, help="Input file")
+class ValidatePathsAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if not values:
+            return
+
+        for path in values:
+            if not isinstance(path, Path):
+                parser.error(f"Error occured with path: '{path}'")
+            if not path.exists():
+                parser.error(f"The path '{path}' does not exist")
+            if not path.is_file():
+                parser.error(f"The path '{path}' is not a file")
+                # check file suffix (xlsx or csv)
+
+        setattr(namespace, self.dest, values)
+
+
+def arg_parser_init() -> argparse.Namespace:
+    parser = argparse.ArgumentParser("Portfolio convertor")
+    parser.add_argument(
+        "inputs", nargs="+", type=Path, action=ValidatePathsAction, help="Input files"
+    )
     parser.add_argument(
         "-o", "--output", type=str, default="./output", help="Output file"
     )
@@ -22,56 +42,46 @@ def arg_parser_init() -> Namespace:
         help="Yahoo finance input format, output file is csv",
         action="store_true",
     )
-    group = parser.add_argument_group(
-        "Broker input file", "Select the broker for the input file"
-    )
-    exclusive_group = group.add_mutually_exclusive_group(required=True)
-    exclusive_group.add_argument(
-        "--t212", help="Trading212 input file", action="store_true"
-    )
-    exclusive_group.add_argument("--xtb", help="XTB input file", action="store_true")
     return parser.parse_args()
 
 
-def yahoo_output(output_file: str, reader: Reader) -> None:
-    previous_stocks = []
-
-    if os.path.exists(output_file):
-        with open(output_file, "r") as file:
-            csv_reader = csv.DictReader(file, YAHOO_EXPORT.to_list())
-            previous_stocks = [row for row in csv_reader][1:]
-
+def yahoo_output(output_file: str, store: Store) -> None:
     with open(output_file, "w+") as file:
         writer = csv.DictWriter(file, YAHOO_EXPORT.to_list())
         writer.writeheader()
-        if previous_stocks:
-            writer.writerows(previous_stocks)
-        writer.writerows([stock.to_yahoo() for stock in reader.buys])
-        writer.writerows([stock.to_yahoo() for stock in reader.sells])
+        writer.writerows([stock.to_yahoo() for stock in store.buys])
+        writer.writerows([stock.to_yahoo() for stock in store.sells])
+
+
+def get_broker(input_file: Path):
+    match input_file.suffix:
+        case ".csv":
+            return Trading212Reader()
+        case ".xlsx":
+            return XtbReader()
+
+    raise ValueError(f"Not supported file extension: {input_file.suffix}")
 
 
 def main() -> None:
     args = arg_parser_init()
-    if args.t212:
-        reader = Trading212Reader()
-    elif args.xtb:
-        reader = XtbReader()
-    else:
-        print("Not supported yet")
-        return
 
-    reader.read(args.input)
+    store = Store()
+    for input_file in args.inputs:
+        reader = get_broker(input_file)
+        buys = reader.read(input_file)
+        store.buys.extend(buys)
 
     if args.yahoo:
-        yahoo_output(args.output, reader)
+        yahoo_output(args.output, store)
         return
 
     with open(args.output, "w") as output_file:
         json.dump(
             {
-                "buys": reader.dump_buys_to_json(),
-                "sells": reader.dump_sells_to_json(),
-                "deposits": reader.deposits,
+                "buys": store.dump_buys_to_json(),
+                "sells": store.dump_sells_to_json(),
+                "deposits": store.deposits,
             },
             output_file,
             indent=4,
