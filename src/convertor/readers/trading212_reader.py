@@ -1,13 +1,21 @@
 from csv import DictReader
+from collections.abc import Sequence
+from pathlib import Path
 
 from .reader import Reader
 from convertor.stocks.trading212_stock import Trading212Stock
 
 
-class Trading212Reader(Reader[Trading212Stock]):
+class Trading212Reader(Reader):
 
-    def read(self, input_file: str) -> None:
-        with open(input_file, "r") as csvfile:
+    def read(
+        self, input_file: Path
+    ) -> tuple[Sequence[Trading212Stock], Sequence[Trading212Stock], float]:
+        buys: list[Trading212Stock] = []
+        sells: list[Trading212Stock] = []
+        deposits: float = 0.0
+
+        with input_file.open("r") as csvfile:
             reader = DictReader(csvfile)
 
             for row in reader:
@@ -15,10 +23,12 @@ class Trading212Reader(Reader[Trading212Stock]):
                 stock = Trading212Stock.from_dict(row)
 
                 if action == "Market buy" or action == "Limit buy":
-                    self._buys.append(stock)
+                    buys.append(stock)
 
                 elif action == "Market sell" or action == "Limit sell":
-                    self._sells.append(stock)
+                    sells.append(stock)
 
                 elif action == "Deposit":
-                    self._deposits += stock.total_price
+                    deposits += stock.total_price
+
+        return buys, sells, deposits

@@ -13,9 +13,9 @@ class Trading212Stock(Stock):
     @classmethod
     def from_dict(cls, data: dict[str, str]) -> Self:
         return cls(
-            ticker=data.get("Ticker"),
-            name=data.get("Name"),
-            time=datetime.strptime(data.get("Time").split(" ")[0], "%Y-%m-%d").strftime("%Y%m%d"),
+            ticker=data.get("Ticker", ""),
+            name=data.get("Name", ""),
+            time=datetime.strptime(data.get("Time", "").split(" ")[0], "%Y-%m-%d").strftime("%Y%m%d"),
             quantity=float(number) if (number := data.get("No. of shares")) else -1.0,
             share_price=float(number) if (number := data.get("Price / share")) else -1.0,
             currency_main=(
