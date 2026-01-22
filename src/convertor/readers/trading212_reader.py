@@ -8,7 +8,9 @@ from convertor.stocks.trading212_stock import Trading212Stock
 
 class Trading212Reader(Reader):
 
-    def read(self, input_file: Path) -> Sequence[Trading212Stock]:
+    def read(
+        self, input_file: Path
+    ) -> tuple[Sequence[Trading212Stock], Sequence[Trading212Stock], float]:
         buys: list[Trading212Stock] = []
         sells: list[Trading212Stock] = []
         deposits: float = 0.0
@@ -28,4 +30,5 @@ class Trading212Reader(Reader):
 
                 elif action == "Deposit":
                     deposits += stock.total_price
-        return buys
+
+        return buys, sells, deposits

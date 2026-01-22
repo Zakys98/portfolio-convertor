@@ -20,6 +20,10 @@ class Store:
     def deposits(self) -> float:
         return self._deposits
 
+    @deposits.setter
+    def deposits(self, value) -> None:
+        self._deposits = value
+
     def dump_buys_to_json(self) -> list[dict[str, str | float]]:
         return [stock.model_dump() for stock in self._buys]
 

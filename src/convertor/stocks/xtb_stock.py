@@ -8,7 +8,7 @@ from .stock import Stock
 class XtbStock(Stock):
 
     @classmethod
-    def from_dict(cls, line: tuple[str, str, str, str], currency: Currency) -> Self:
+    def from_dict(cls, line: tuple[datetime, str, str, str], currency: Currency) -> Self:
         quantity, share_price = (
             line[1]
             .removeprefix("OPEN BUY")

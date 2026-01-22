@@ -13,7 +13,7 @@ from convertor.store import Store
 
 
 class ValidatePathsAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
         if not values:
             return
 
@@ -53,7 +53,7 @@ def yahoo_output(output_file: str, store: Store) -> None:
         writer.writerows([stock.to_yahoo() for stock in store.sells])
 
 
-def get_broker(input_file: Path):
+def get_broker(input_file: Path) -> Reader:
     match input_file.suffix:
         case ".csv":
             return Trading212Reader()
@@ -69,8 +69,10 @@ def main() -> None:
     store = Store()
     for input_file in args.inputs:
         reader = get_broker(input_file)
-        buys = reader.read(input_file)
+        buys, sells, deposits = reader.read(input_file)
         store.buys.extend(buys)
+        store.sells.extend(sells)
+        store.deposits += deposits
 
     if args.yahoo:
         yahoo_output(args.output, store)

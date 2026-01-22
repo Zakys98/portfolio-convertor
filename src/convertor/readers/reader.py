@@ -8,5 +8,5 @@ from convertor.stocks.stock import Stock
 class Reader(ABC):
 
     @abstractmethod
-    def read(self, input_file: Path) -> Sequence[Stock]:
+    def read(self, input_file: Path) -> tuple[Sequence[Stock], Sequence[Stock], float]:
         pass
