@@ -1,19 +1,26 @@
 from csv import DictReader
-from collections.abc import Sequence
+from enum import StrEnum
 from pathlib import Path
 
 from .reader import Reader
 from convertor.stocks.trading212_stock import Trading212Stock
+from convertor.report import Trading212Report
+from convertor.stocks.dividend import Dividend
+
+
+class T212Action(StrEnum):
+    DEP = "Deposit"
+    DIV = "Dividend (Dividend)"
+    MB = "Market buy"
+    MS = "Market sell"
+    LB = "Limit buy"
+    LS = "Limit sell"
 
 
 class Trading212Reader(Reader):
 
-    def read(
-        self, input_file: Path
-    ) -> tuple[Sequence[Trading212Stock], Sequence[Trading212Stock], float]:
-        buys: list[Trading212Stock] = []
-        sells: list[Trading212Stock] = []
-        deposits: float = 0.0
+    def read(self, input_file: Path) -> Trading212Report:
+        report = Trading212Report()
 
         with input_file.open("r") as csvfile:
             reader = DictReader(csvfile)
@@ -22,13 +29,26 @@ class Trading212Reader(Reader):
                 action = row.get("Action", "")
                 stock = Trading212Stock.from_dict(row)
 
-                if action == "Market buy" or action == "Limit buy":
-                    buys.append(stock)
+                if action == T212Action.MB or action == T212Action.LB:
+                    report.buys.append(stock)
 
-                elif action == "Market sell" or action == "Limit sell":
-                    sells.append(stock)
+                elif action == T212Action.MS or action == T212Action.LS:
+                    report.sells.append(stock)
 
-                elif action == "Deposit":
-                    deposits += stock.total_price
+                elif action == T212Action.DIV:
+                    report.dividends.append(
+                        Dividend(
+                            ticker=stock.ticker,
+                            time=stock.time,
+                            amount=stock.total_price,
+                        )
+                    )
 
-        return buys, sells, deposits
+                elif action == T212Action.DEP:
+                    report.deposit += stock.total_price
+
+                else:
+                    # print(action)
+                    pass
+
+        return report
