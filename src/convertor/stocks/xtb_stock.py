@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Self
 
 from convertor.currency import Currency
-from .stock import Stock
+from convertor.stocks.stock import Stock
 
 
 class XtbStock(Stock):
@@ -25,5 +25,5 @@ class XtbStock(Stock):
             quantity=float(quantity),
             share_price=float(share_price),
             currency_main=currency,
-            total_price=float(number) if (number := line[3]) else -1.0,
+            total_price=abs(float(number)) if (number := line[3]) else -1.0,
         )
