@@ -3,7 +3,7 @@ from enum import StrEnum
 
 import openpyxl
 
-from .reader import Reader
+from convertor.readers.reader import Reader
 from convertor.currency import Currency
 from convertor.stocks.dividend import Dividend
 from convertor.stocks.xtb_stock import XtbStock

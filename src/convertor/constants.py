@@ -1,7 +1,12 @@
 from enum import StrEnum
 
 
-class YAHOO_EXPORT(StrEnum):
+class PathExtensin(StrEnum):
+    CSV = ".csv"
+    XLSX = ".xlsx"
+
+
+class Yahoo(StrEnum):
     SYMBOL = "Symbol"
     TRADE_DATE = "Trade Date"
     QUANTITY = "Quantity"

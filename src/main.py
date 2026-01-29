@@ -8,8 +8,8 @@ from pathlib import Path
 from convertor.readers.reader import Reader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
-from convertor.constants import YAHOO_EXPORT
-from convertor.store import Store
+from convertor.constants import PathExtensin, Yahoo
+from convertor.report_manager import ReportManager
 
 
 class ValidatePathsAction(argparse.Action):
@@ -24,7 +24,8 @@ class ValidatePathsAction(argparse.Action):
                 parser.error(f"The path '{path}' does not exist")
             if not path.is_file():
                 parser.error(f"The path '{path}' is not a file")
-                # check file suffix (xlsx or csv)
+            if path.suffix.lower() not in [PathExtensin.CSV, PathExtensin.XLSX]:
+                parser.error(f"Unsupported file extension: {path.suffix}")
 
         setattr(namespace, self.dest, values)
 
@@ -35,7 +36,7 @@ def arg_parser_init() -> argparse.Namespace:
         "inputs", nargs="+", type=Path, action=ValidatePathsAction, help="Input files"
     )
     parser.add_argument(
-        "-o", "--output", type=str, default="./output", help="Output file"
+        "-o", "--output", type=str, default="out.json", help="Output file"
     )
     parser.add_argument(
         "--yahoo",
@@ -45,19 +46,18 @@ def arg_parser_init() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def yahoo_output(output_file: str, store: Store) -> None:
+def yahoo_output(output_file: str, manager: ReportManager) -> None:
     with open(output_file, "w+") as file:
-        writer = csv.DictWriter(file, YAHOO_EXPORT.to_list())
+        writer = csv.DictWriter(file, Yahoo.to_list())
         writer.writeheader()
-        writer.writerows([stock.to_yahoo() for stock in store.buys])
-        writer.writerows([stock.to_yahoo() for stock in store.sells])
+        writer.writerows(manager.dump_to_yahoo())
 
 
 def get_broker(input_file: Path) -> Reader:
     match input_file.suffix:
-        case ".csv":
+        case PathExtensin.CSV:
             return Trading212Reader()
-        case ".xlsx":
+        case PathExtensin.XLSX:
             return XtbReader()
 
     raise ValueError(f"Not supported file extension: {input_file.suffix}")
@@ -66,24 +66,23 @@ def get_broker(input_file: Path) -> Reader:
 def main() -> None:
     args = arg_parser_init()
 
-    store = Store()
+    manager = ReportManager()
     for input_file in args.inputs:
         reader = get_broker(input_file)
-        buys, sells, deposits = reader.read(input_file)
-        store.buys.extend(buys)
-        store.sells.extend(sells)
-        store.deposits += deposits
+        report = reader.read(input_file)
+        manager.reports.append(report)
 
     if args.yahoo:
-        yahoo_output(args.output, store)
+        yahoo_output(args.output, manager)
         return
 
     with open(args.output, "w") as output_file:
         json.dump(
             {
-                "buys": store.dump_buys_to_json(),
-                "sells": store.dump_sells_to_json(),
-                "deposits": store.deposits,
+                "buys": manager.dump_buys_to_json(),
+                "sells": manager.dump_sells_to_json(),
+                "dividends": manager.dump_dividends_to_json(),
+                "deposits": manager.dump_deposits_to_json(),
             },
             output_file,
             indent=4,
