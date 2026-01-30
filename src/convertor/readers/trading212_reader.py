@@ -47,8 +47,4 @@ class Trading212Reader(Reader):
                 elif action == T212Action.DEP:
                     report.deposit += stock.total_price
 
-                else:
-                    # print(action)
-                    pass
-
         return report
