@@ -59,8 +59,9 @@ class XtbReader(Reader):
 
             elif (
                 action == XtbAction.DIV
-                and (ticker := values[-2] is not None)
-                and (amount := values[-1] is not None)
+                and (ticker := values[-2]) is not None
+                and (amount := values[-1]) is not None
+                and isinstance(amount, float)
             ):
                 report.dividends.append(
                     Dividend(
@@ -71,12 +72,16 @@ class XtbReader(Reader):
                 )
 
             elif (
-                action == XtbAction.DEP
-                or action == XtbAction.FFI
-                or action == XtbAction.FFIT
-                or action == XtbAction.WT
-                or action == XtbAction.SD
-            ) and (deposit := values[-1] is not None):
+                (
+                    action == XtbAction.DEP
+                    or action == XtbAction.FFI
+                    or action == XtbAction.FFIT
+                    or action == XtbAction.WT
+                    or action == XtbAction.SD
+                )
+                and (deposit := values[-1]) is not None
+                and isinstance(deposit, float)
+            ):
                 report.deposit += float(deposit)
 
         return report
