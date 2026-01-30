@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from pathlib import Path
 
-from convertor.stocks.stock import Stock
+from convertor.report import Report
 
 
 class Reader(ABC):
 
     @abstractmethod
-    def read(self, input_file: Path) -> tuple[Sequence[Stock], Sequence[Stock], float]:
+    def read(self, input_file: Path) -> Report:
         pass

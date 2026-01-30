@@ -1,12 +1,13 @@
-from collections.abc import Sequence
 from pathlib import Path
 from enum import StrEnum
 
 import openpyxl
 
-from .reader import Reader
+from convertor.readers.reader import Reader
 from convertor.currency import Currency
+from convertor.stocks.dividend import Dividend
 from convertor.stocks.xtb_stock import XtbStock
+from convertor.report import XtbReport
 
 
 class XtbAction(StrEnum):
@@ -33,18 +34,13 @@ class XtbReader(Reader):
         except (IndexError, ValueError):
             return Currency.EUR
 
-    def read(
-        self, input_file: Path
-    ) -> tuple[Sequence[XtbStock], Sequence[XtbStock], float]:
-        buys: list[XtbStock] = []
-        sells: list[XtbStock] = []
-        deposits: float = 0.0
-
+    def read(self, input_file: Path) -> XtbReport:
         workbook = openpyxl.load_workbook(input_file)
         sheet = workbook["CASH OPERATION HISTORY"]
 
         rows = list(sheet.iter_rows(values_only=True))
         currency = self._extract_currency(rows[self.CURRENCY_ROW_INDEX])
+        report = XtbReport(deposit_currency=currency)
 
         for row in rows:
             data = row[self.START_COL : self.END_COL_OFFSET]
@@ -56,12 +52,36 @@ class XtbReader(Reader):
             values = data[1:]
 
             if action == XtbAction.SP:
-                buys.append(XtbStock.from_dict(values, currency))
+                report.buys.append(XtbStock.from_dict(values, currency))
 
             elif action == XtbAction.SS:
-                sells.append(XtbStock.from_dict(values, currency))
+                report.sells.append(XtbStock.from_dict(values, currency))
 
-            elif action == XtbAction.DEP:
-                deposits += float(str(values[-1]) or 0)
+            elif (
+                action == XtbAction.DIV
+                and (ticker := values[-2]) is not None
+                and (amount := values[-1]) is not None
+                and isinstance(amount, float)
+            ):
+                report.dividends.append(
+                    Dividend(
+                        ticker=str(ticker),
+                        time=values[0].strftime("%Y%m%d"),
+                        amount=float(amount),
+                    )
+                )
 
-        return buys, sells, deposits
+            elif (
+                (
+                    action == XtbAction.DEP
+                    or action == XtbAction.FFI
+                    or action == XtbAction.FFIT
+                    or action == XtbAction.WT
+                    or action == XtbAction.SD
+                )
+                and (deposit := values[-1]) is not None
+                and isinstance(deposit, float)
+            ):
+                report.deposit += float(deposit)
+
+        return report

@@ -2,7 +2,6 @@ name: Linting
 
 on:
   push:
-  pull_request:
 
 jobs:
   ruff:
@@ -17,3 +16,5 @@ jobs:
 
       - name: Run Ruff
         uses: astral-sh/ruff-action@v3
+        with:
+          version: "latest"
