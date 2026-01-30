@@ -57,12 +57,16 @@ class XtbReader(Reader):
             elif action == XtbAction.SS:
                 report.sells.append(XtbStock.from_dict(values, currency))
 
-            elif action == XtbAction.DIV:
+            elif (
+                action == XtbAction.DIV
+                and (ticker := values[-2] is not None)
+                and (amount := values[-1] is not None)
+            ):
                 report.dividends.append(
                     Dividend(
-                        ticker=values[-2],
+                        ticker=str(ticker),
                         time=values[0].strftime("%Y%m%d"),
-                        amount=values[-1],
+                        amount=float(amount),
                     )
                 )
 
@@ -72,7 +76,7 @@ class XtbReader(Reader):
                 or action == XtbAction.FFIT
                 or action == XtbAction.WT
                 or action == XtbAction.SD
-            ):
-                report.deposit += float(str(values[-1]) or 0)
+            ) and (deposit := values[-1] is not None):
+                report.deposit += float(deposit)
 
         return report

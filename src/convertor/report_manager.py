@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from collections import defaultdict
+from itertools import chain
 
 from convertor.stocks.stock import Stock
 from convertor.report import Report
@@ -46,5 +47,5 @@ class ReportManager[T: Stock](BaseModel):
         return [
             stock.to_yahoo()
             for report in self.reports
-            for stock in (report.buys + report.sells)
+            for stock in chain(report.buys, report.sells)
         ]
