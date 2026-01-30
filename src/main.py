@@ -47,7 +47,7 @@ def arg_parser_init() -> argparse.Namespace:
 
 
 def yahoo_output(output_file: str, manager: ReportManager) -> None:
-    with open(output_file, "w+") as file:
+    with open(output_file, "w", newline="") as file:
         writer = csv.DictWriter(file, Yahoo.to_list())
         writer.writeheader()
         writer.writerows(manager.dump_to_yahoo())
