@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 
-class PathExtensin(StrEnum):
+class FileExtension(StrEnum):
     CSV = ".csv"
     XLSX = ".xlsx"
 

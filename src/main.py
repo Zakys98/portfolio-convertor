@@ -8,7 +8,7 @@ from pathlib import Path
 from convertor.readers.reader import Reader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
-from convertor.constants import PathExtensin, Yahoo
+from convertor.constants import FileExtension, Yahoo
 from convertor.report_manager import ReportManager
 
 
@@ -24,7 +24,7 @@ class ValidatePathsAction(argparse.Action):
                 parser.error(f"The path '{path}' does not exist")
             if not path.is_file():
                 parser.error(f"The path '{path}' is not a file")
-            if path.suffix.lower() not in [PathExtensin.CSV, PathExtensin.XLSX]:
+            if path.suffix.lower() not in [FileExtension.CSV, FileExtension.XLSX]:
                 parser.error(f"Unsupported file extension: {path.suffix}")
 
         setattr(namespace, self.dest, values)
@@ -55,9 +55,9 @@ def yahoo_output(output_file: str, manager: ReportManager) -> None:
 
 def get_broker(input_file: Path) -> Reader:
     match input_file.suffix:
-        case PathExtensin.CSV:
+        case FileExtension.CSV:
             return Trading212Reader()
-        case PathExtensin.XLSX:
+        case FileExtension.XLSX:
             return XtbReader()
 
     raise ValueError(f"Not supported file extension: {input_file.suffix}")
