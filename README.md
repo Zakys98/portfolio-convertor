@@ -23,10 +23,12 @@ uv sync
 
 ## Run
 
-Run the script by specifying your input file, desired output name, and the broker type.
+Run the script by specifying your input files and output name.
 ```bash
-python3 main.py --input t212_export.csv --output yahoo_import.csv --t212 --yahoo
+python3 src/main.py xtb.xlsx t212_export.csv --output output.json
 ```
 
-Note:
-If the output file already exists, the script will append the converted data to the end of the file instead of overwriting it.
+Also Yahoo finance input format is supported.
+```bash
+python3 src/main.py xtb.xlsx t212_export.csv --output yahoo_output.csv --yahoo
+```
