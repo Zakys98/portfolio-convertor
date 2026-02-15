@@ -1,8 +1,7 @@
-from datetime import datetime
 from typing import Self
 
 from convertor.currency import Currency
-from .stock import Stock
+from convertor.stocks.stock import Stock
 
 
 class Trading212Stock(Stock):
@@ -15,7 +14,7 @@ class Trading212Stock(Stock):
         return cls(
             ticker=data.get("Ticker", ""),
             name=data.get("Name", ""),
-            time=datetime.strptime(data.get("Time", "").split(" ")[0], "%Y-%m-%d").strftime("%Y%m%d"),
+            time=data.get("Time", ""),
             quantity=float(number) if (number := data.get("No. of shares")) else -1.0,
             share_price=float(number) if (number := data.get("Price / share")) else -1.0,
             currency_main=(
