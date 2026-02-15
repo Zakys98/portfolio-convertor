@@ -61,7 +61,10 @@ class XtbReader(Reader):
             if not data[0] or data[0] == "Type":
                 continue
 
-            action = XtbAction(data[0])
+            try:
+                action = XtbAction(data[0])
+            except ValueError:
+                continue
             values = data[1:]
 
             if action in ACTION_MAP:
