@@ -47,6 +47,9 @@ class XtbReader(Reader):
         sheet = workbook[self.WORKSHEET]
 
         rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            return XtbReport()
+
         currency = self._extract_currency(rows[self.CURRENCY_ROW_INDEX])
         report = XtbReport(deposit_currency=currency)
 
