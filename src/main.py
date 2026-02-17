@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any, Sequence
 
-from convertor.readers.reader import Reader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
 from convertor.constants import FileExtension, Yahoo
@@ -65,7 +64,7 @@ def yahoo_output(output_file: Path, manager: ReportManager) -> None:
 
 
 def get_broker(input_file: Path) -> XtbReader | Trading212Reader:
-    match input_file.suffix:
+    match input_file.suffix.lower():
         case FileExtension.CSV:
             return Trading212Reader()
         case FileExtension.XLSX:
