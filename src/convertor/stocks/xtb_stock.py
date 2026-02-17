@@ -9,17 +9,19 @@ from convertor.utils import date_to_string
 class XtbStock(Stock):
 
     @classmethod
-    def from_dict(cls, line: tuple[datetime, str, str, str], currency: Currency) -> Self:
-        quantity = (
+    def from_dict(cls, line: tuple[datetime, str, str, float | int], currency: Currency) -> Self:
+        # Extract quantity string from the transaction description
+        quantity_str = (
             line[1]
             .removeprefix("OPEN BUY")
             .removeprefix("CLOSE BUY")
             .replace("@", "")
             .split()[0]
         )
-        if "/" in quantity:
-            quantity = quantity.split("/")[0]
-        quantity = float(quantity)
+        if "/" in quantity_str:
+            quantity_str = quantity_str.split("/")[0]
+
+        quantity = float(quantity_str)
         total_price = abs(float(number)) if (number := line[3]) else -1.0
         share_price = round(total_price / quantity, 2)
 

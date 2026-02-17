@@ -6,10 +6,10 @@ from convertor.stocks.stock import Stock
 from convertor.report import Report
 
 
-class ReportManager[T: Stock](BaseModel):
-    reports: list[Report[T]] = Field(default_factory=list)
+class ReportManager(BaseModel):
+    reports: list[Report[Stock]] = Field(default_factory=list)
 
-    def _filter_by_time(self, stock):
+    def _filter_by_time(self, stock: dict[str, str | float]) -> str | float:
         return stock["time"]
 
     def dump_buys_to_json(self) -> list[dict[str, str | float]]:
@@ -35,7 +35,7 @@ class ReportManager[T: Stock](BaseModel):
         )
 
     def dump_deposits_to_json(self) -> dict[str, float]:
-        totals = defaultdict(float)
+        totals: defaultdict[str, float] = defaultdict(float)
 
         for report in self.reports:
             currency_key = report.deposit_currency.value
