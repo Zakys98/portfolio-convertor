@@ -10,25 +10,45 @@ class Trading212Stock(Stock):
     exchange_rate: float
 
     @classmethod
+    def _parse_float(cls, value: str | None, default: float = -1.0) -> float:
+        """Parse a string value to float, returning default if invalid."""
+        if not value:
+            return default
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+
+    @classmethod
+    def _parse_currency(cls, value: str | None, default: str = "USD") -> Currency:
+        """Parse a currency string, returning default currency if invalid."""
+        if not value:
+            return Currency(default)
+        try:
+            return Currency(value)
+        except (ValueError, TypeError):
+            return Currency(default)
+
+    @classmethod
+    def _parse_exchange_rate(cls, value: str | None) -> float:
+        """Parse exchange rate, handling 'Not available' special case."""
+        if not value or value == "Not available":
+            return 1.0
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 1.0
+
+    @classmethod
     def from_dict(cls, data: dict[str, str]) -> Self:
         return cls(
             ticker=data.get("Ticker", ""),
             name=data.get("Name", ""),
             time=data.get("Time", ""),
-            quantity=float(number) if (number := data.get("No. of shares")) else -1.0,
-            share_price=float(number) if (number := data.get("Price / share")) else -1.0,
-            currency_main=(
-                Currency(curr)
-                if (curr := data.get("Currency (Price / share)"))
-                else Currency("USD")
-            ),
-            currency_order=(
-                Currency(curr) if (curr := data.get("Currency (Result)")) else Currency("USD")
-            ),
-            exchange_rate=(
-                float(number)
-                if ((number := data.get("Exchange rate")) and number != "Not available")
-                else 1.0
-            ),
-            total_price=float(number) if (number := data.get("Total")) else -1.0,
+            quantity=cls._parse_float(data.get("No. of shares")),
+            share_price=cls._parse_float(data.get("Price / share")),
+            currency_main=cls._parse_currency(data.get("Currency (Price / share)")),
+            currency_order=cls._parse_currency(data.get("Currency (Result)")),
+            exchange_rate=cls._parse_exchange_rate(data.get("Exchange rate")),
+            total_price=cls._parse_float(data.get("Total")),
         )

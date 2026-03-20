@@ -4,8 +4,8 @@ import argparse
 import csv
 import json
 from pathlib import Path
+from typing import Any, Sequence
 
-from convertor.readers.reader import Reader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
 from convertor.constants import FileExtension, Yahoo
@@ -13,7 +13,13 @@ from convertor.report_manager import ReportManager
 
 
 class ValidatePathsAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None) -> None:
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         if not values:
             return
 
@@ -36,7 +42,7 @@ def arg_parser_init() -> argparse.Namespace:
         "inputs", nargs="+", type=Path, action=ValidatePathsAction, help="Input files"
     )
     parser.add_argument(
-        "-o", "--output", type=str, default="out.json", help="Output file"
+        "-o", "--output", type=Path, default=Path("out.json"), help="Output file"
     )
     parser.add_argument(
         "--yahoo",
@@ -46,15 +52,19 @@ def arg_parser_init() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def yahoo_output(output_file: str, manager: ReportManager) -> None:
-    with open(output_file, "w", newline="") as file:
+def yahoo_output(output_file: Path, manager: ReportManager) -> None:
+    # Ensure output file has .csv extension for yahoo format
+    if output_file.suffix.lower() != FileExtension.CSV:
+        output_file = output_file.with_suffix(FileExtension.CSV)
+
+    with output_file.open("w", newline="") as file:
         writer = csv.DictWriter(file, Yahoo.to_list())
         writer.writeheader()
         writer.writerows(manager.dump_to_yahoo())
 
 
-def get_broker(input_file: Path) -> Reader:
-    match input_file.suffix:
+def get_broker(input_file: Path) -> XtbReader | Trading212Reader:
+    match input_file.suffix.lower():
         case FileExtension.CSV:
             return Trading212Reader()
         case FileExtension.XLSX:
@@ -70,13 +80,13 @@ def main() -> None:
     for input_file in args.inputs:
         reader = get_broker(input_file)
         report = reader.read(input_file)
-        manager.reports.append(report)
+        manager.reports.append(report)  # type: ignore[arg-type]
 
     if args.yahoo:
         yahoo_output(args.output, manager)
         return
 
-    with open(args.output, "w") as output_file:
+    with args.output.open("w") as output_file:
         json.dump(
             {
                 "buys": manager.dump_buys_to_json(),
