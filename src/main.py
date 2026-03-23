@@ -2,7 +2,6 @@
 
 import argparse
 import csv
-import json
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -42,7 +41,13 @@ def arg_parser_init() -> argparse.Namespace:
         "inputs", nargs="+", type=Path, action=ValidatePathsAction, help="Input files"
     )
     parser.add_argument(
-        "-o", "--output", type=Path, default=Path("out.json"), help="Output file"
+        "-o", "--output", type=Path, default=Path("out"), help="Output file"
+    )
+    parser.add_argument(
+        "--format",
+        choices=["csv", "json"],
+        default="csv",
+        help="Output format (default: csv)",
     )
     parser.add_argument(
         "--yahoo",
@@ -86,17 +91,10 @@ def main() -> None:
         yahoo_output(args.output, manager)
         return
 
-    with args.output.open("w") as output_file:
-        json.dump(
-            {
-                "buys": manager.dump_buys_to_json(),
-                "sells": manager.dump_sells_to_json(),
-                "dividends": manager.dump_dividends_to_json(),
-                "deposits": manager.dump_deposits_to_json(),
-            },
-            output_file,
-            indent=4,
-        )
+    if args.format == "csv":
+        manager.write_csv(args.output.with_suffix(FileExtension.CSV))
+    else:
+        manager.write_json(args.output.with_suffix(FileExtension.JSON))
 
 
 if __name__ == "__main__":

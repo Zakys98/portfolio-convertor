@@ -1,5 +1,9 @@
+import csv
+import json
+from pathlib import Path
+from typing import Any
+
 from pydantic import BaseModel, Field
-from collections import defaultdict
 from itertools import chain
 
 from convertor.stocks.stock import Stock
@@ -12,36 +16,32 @@ class ReportManager(BaseModel):
     def _filter_by_time(self, stock: dict[str, str | float]) -> str | float:
         return stock["time"]
 
-    def dump_buys_to_json(self) -> list[dict[str, str | float]]:
-        return sorted(
-            [stock.model_dump() for report in self.reports for stock in report.buys],
-            key=self._filter_by_time,
-        )
+    def transactions(self) -> list[dict[str, Any]]:
+        transactions: list[dict[str, Any]] = []
 
-    def dump_sells_to_json(self)-> list[dict[str, str | float]]:
-        return sorted(
-            [stock.model_dump() for report in self.reports for stock in report.sells],
-            key=self._filter_by_time,
-        )
+        for type_, items in (
+            ("BUY", [s for r in self.reports for s in r.buys]),
+            ("SELL", [s for r in self.reports for s in r.sells]),
+            ("DIVIDEND", [s for r in self.reports for s in r.dividends]),
+        ):
+            for item in items:
+                transactions.append({"type": type_} | item.model_dump())
 
-    def dump_dividends_to_json(self)-> list[dict[str, str | float]]:
-        return sorted(
-            [
-                stock.model_dump()
-                for report in self.reports
-                for stock in report.dividends
-            ],
-            key=self._filter_by_time,
-        )
+        transactions.sort(key=self._filter_by_time)
 
-    def dump_deposits_to_json(self) -> dict[str, float]:
-        totals: defaultdict[str, float] = defaultdict(float)
+        return transactions
 
-        for report in self.reports:
-            currency_key = report.deposit_currency.value
-            totals[currency_key] += report.deposit
+    def write_csv(self, output_file: Path) -> None:
+        transactions = self.transactions()
+        fieldnames = list(dict.fromkeys(k for row in transactions for k in row))
+        with output_file.open("w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(transactions)
 
-        return dict(totals)
+    def write_json(self, output_file: Path) -> None:
+        with output_file.open("w") as file:
+            json.dump(self.transactions(), file, indent=4)
 
     def dump_to_yahoo(self)-> list[dict[str, str | float | int]]:
         return [
