@@ -3,6 +3,7 @@ from enum import StrEnum
 
 class FileExtension(StrEnum):
     CSV = ".csv"
+    JSON = ".json"
     XLSX = ".xlsx"
 
 
