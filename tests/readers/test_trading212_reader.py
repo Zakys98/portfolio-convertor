@@ -371,3 +371,19 @@ def test_case_sensitivity_actions(tmp_path):
     # Only properly cased "Market buy" should be parsed
     assert len(report.buys) == 1
     assert report.buys[0].ticker == "TSLA"
+
+
+def test_dividend_currency_defaults_to_usd_when_column_missing(tmp_path):
+    """Test that dividend currency defaults to USD when Currency (Result) column is absent."""
+    csv_file = tmp_path / "no_currency_col.csv"
+    content = (
+        "Action,Ticker,Time,Total\n"
+        "Dividend (Dividend),MSFT,2023-01-04 09:00:00,5.50\n"
+    )
+    csv_file.write_text(content)
+
+    reader = Trading212Reader()
+    report = reader.read(csv_file)
+
+    assert len(report.dividends) == 1
+    assert report.dividends[0].currency == Currency.USD

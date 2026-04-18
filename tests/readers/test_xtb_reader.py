@@ -560,7 +560,7 @@ def test_midnight_and_edge_dates(tmp_path):
 
     # Add header rows (must have 12 columns to match data rows)
     sheet.append(
-        [None, None, "Currency", None, None, None, "USD", None, None, None, None, None]
+        [None, None, "Currency", None, None, None, "EUR", None, None, None, None, None]
     )
     for _ in range(4):
         sheet.append([None] * 12)
