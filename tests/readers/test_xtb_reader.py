@@ -320,7 +320,7 @@ def test_different_deposit_types(tmp_path):
     for _ in range(4):
         sheet.append([None] * 12)
     sheet.append(
-        [None, None, "EUR", None, None, "EUR", None, None, None, None, None, None]
+        [None, None, None, None, None, None, "EUR", None, None, None, None, None]
     )
     sheet.append(
         [
@@ -449,7 +449,7 @@ def test_transaction_chronological_order(tmp_path):
     for _ in range(4):
         sheet.append([None] * 12)
     sheet.append(
-        [None, None, "EUR", None, None, "EUR", None, None, None, None, None, None]
+        [None, None, None, None, None, None, "USD", None, None, None, None, None]
     )
     sheet.append(
         [
