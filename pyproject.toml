@@ -1,6 +1,6 @@
 [project]
 name = "portfolio-convertor"
-version = "0.3.0"
+version = "0.3.1"
 description = "Magically transfers your portfolio to our standard"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -9,7 +9,7 @@ dependencies = [
     "pydantic>=2.12.5",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
