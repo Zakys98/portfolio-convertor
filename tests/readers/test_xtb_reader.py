@@ -20,7 +20,7 @@ def mock_xlsx(tmp_path):
     sheet.append([None, None, None, None, None, None, None, None])
     sheet.append([None, None, None, None, None, None, None, None])
     sheet.append([None, None, None, None, None, None, None, None])
-    sheet.append([None, None, "EUR", None, None, "EUR", None])
+    sheet.append([None, None, None, None, None, None, "USD", None, None, None, None, None])
 
     # Add column headers
     sheet.append([None, None, "Type", "Time", "Ticker", "Amount", "Price", "Total"])
@@ -80,6 +80,7 @@ def test_xtb_reader_parses_correctly(mock_xlsx):
     assert len(report.dividends) == 1
     assert report.dividends[0].ticker == "MSFT"
     assert report.dividends[0].amount == 5.50
+    assert report.dividends[0].currency == Currency.USD
 
 
 def test_buy_transaction_dates(mock_xlsx):
@@ -107,6 +108,7 @@ def test_dividend_dates(mock_xlsx):
     assert len(report.dividends) == 1
     assert report.dividends[0].time == "2023-01-04 09:00:00"
     assert report.dividends[0].ticker == "MSFT"
+    assert report.dividends[0].currency == Currency.USD
 
 
 def test_currency_extraction(mock_xlsx):
@@ -114,7 +116,7 @@ def test_currency_extraction(mock_xlsx):
 
     report = reader.read(mock_xlsx)
 
-    assert report.deposit_currency == Currency.EUR
+    assert report.deposit_currency == Currency.USD
 
 
 def test_empty_worksheet(tmp_path):
@@ -154,7 +156,7 @@ def test_multiple_transactions_same_type(tmp_path):
     for _ in range(4):
         sheet.append([None] * 12)
     sheet.append(
-        [None, None, "EUR", None, None, "EUR", None, None, None, None, None, None]
+        [None, None, None, None, None, None, "USD", None, None, None, None, None]
     )
     sheet.append(
         [
@@ -296,9 +298,11 @@ def test_multiple_transactions_same_type(tmp_path):
     assert report.dividends[0].ticker == "AAPL"
     assert report.dividends[0].time == "2023-06-01 09:00:00"
     assert report.dividends[0].amount == 10.50
+    assert report.dividends[0].currency == Currency.USD
     assert report.dividends[1].ticker == "MSFT"
     assert report.dividends[1].time == "2023-07-01 09:00:00"
     assert report.dividends[1].amount == 8.25
+    assert report.dividends[1].currency == Currency.USD
 
 
 def test_different_deposit_types(tmp_path):
@@ -316,7 +320,7 @@ def test_different_deposit_types(tmp_path):
     for _ in range(4):
         sheet.append([None] * 12)
     sheet.append(
-        [None, None, "EUR", None, None, "EUR", None, None, None, None, None, None]
+        [None, None, None, None, None, None, "EUR", None, None, None, None, None]
     )
     sheet.append(
         [
@@ -445,7 +449,7 @@ def test_transaction_chronological_order(tmp_path):
     for _ in range(4):
         sheet.append([None] * 12)
     sheet.append(
-        [None, None, "EUR", None, None, "EUR", None, None, None, None, None, None]
+        [None, None, None, None, None, None, "USD", None, None, None, None, None]
     )
     sheet.append(
         [
@@ -556,12 +560,12 @@ def test_midnight_and_edge_dates(tmp_path):
 
     # Add header rows (must have 12 columns to match data rows)
     sheet.append(
-        [None, None, "Currency", None, None, None, "USD", None, None, None, None, None]
+        [None, None, "Currency", None, None, None, "EUR", None, None, None, None, None]
     )
     for _ in range(4):
         sheet.append([None] * 12)
     sheet.append(
-        [None, None, "EUR", None, None, "EUR", None, None, None, None, None, None]
+        [None, None, None, None, None, None, "EUR", None, None, None, None, None]
     )
     sheet.append(
         [
@@ -645,3 +649,4 @@ def test_midnight_and_edge_dates(tmp_path):
 
     assert len(report.dividends) == 1
     assert report.dividends[0].time == "2024-02-29 12:00:00"
+    assert report.dividends[0].currency == Currency.EUR

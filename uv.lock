@@ -156,14 +156,14 @@ wheels = [
 
 [[package]]
 name = "portfolio-convertor"
-version = "0.2.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "openpyxl" },
     { name = "pydantic" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 test = [
     { name = "mypy" },
     { name = "pytest" },
@@ -172,13 +172,16 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mypy", marker = "extra == 'test'", specifier = ">=1.19.1" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=9.0.2" },
-    { name = "types-openpyxl", marker = "extra == 'test'", specifier = ">=3.1.5.20250919" },
 ]
-provides-extras = ["test"]
+
+[package.metadata.requires-dev]
+test = [
+    { name = "mypy", specifier = ">=1.19.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "types-openpyxl", specifier = ">=3.1.5.20250919" },
+]
 
 [[package]]
 name = "pydantic"

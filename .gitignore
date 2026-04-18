@@ -4,6 +4,9 @@ __pycache__/
 dist/
 *.egg-info/
 .venv/
+
 .python-version
 output
 out*
+.mcp.json
+

@@ -79,7 +79,7 @@ class XtbReader(Reader[XtbReport]):
             pass
         return None
 
-    def _parse_dividend(self, values: tuple[Any, ...]) -> Dividend | None:
+    def _parse_dividend(self, values: tuple[Any, ...], currency: Currency) -> Dividend | None:
         """Parse dividend transaction."""
         try:
             time = values[self.TIME_INDEX]
@@ -95,6 +95,7 @@ class XtbReader(Reader[XtbReport]):
                     ticker=str(ticker),
                     time=time,
                     amount=float(amount),
+                    currency=currency,
                 )
         except (IndexError, ValueError):
             pass
@@ -148,7 +149,7 @@ class XtbReader(Reader[XtbReport]):
 
             # Handle dividends
             elif action == XtbAction.DIV:
-                if dividend := self._parse_dividend(values):
+                if dividend := self._parse_dividend(values, currency):
                     report.dividends.append(dividend)
 
             # Handle deposits, fees, and taxes
