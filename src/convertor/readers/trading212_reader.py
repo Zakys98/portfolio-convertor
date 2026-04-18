@@ -37,6 +37,7 @@ class Trading212Reader(Reader[Trading212Report]):
                     ticker=stock.ticker,
                     time=stock.time,
                     amount=stock.total_price,
+                    currency=stock.currency_order,
                 )
         except (ValueError, KeyError, TypeError):
             pass
