@@ -7,6 +7,7 @@ This utility bridges the gap between your brokerage data and Yahoo Finance. It c
 **Supported brokers**:
 - Trading212
 - XTB
+- Interactive Brokers (IBKR) — stocks only
 
 ## Prerequisites
 

@@ -74,7 +74,7 @@ def get_broker(input_file: Path) -> XtbReader | Trading212Reader | IbkrReader:
         case FileExtension.XLSX:
             return XtbReader()
         case FileExtension.CSV:
-            with input_file.open("r") as f:
+            with input_file.open("r", encoding="utf-8") as f:
                 first_line = f.readline()
             if first_line.startswith("Statement,Header"):
                 return IbkrReader()

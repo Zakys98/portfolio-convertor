@@ -32,7 +32,6 @@ class IbkrReader(Reader[IbkrReport]):
 
     def read(self, input_file: Path) -> IbkrReport:
         report = IbkrReport()
-        currency = Currency.CZK
 
         with input_file.open("r", encoding="utf-8") as f:
             reader = csv.reader(f)
@@ -44,8 +43,7 @@ class IbkrReader(Reader[IbkrReport]):
 
                 if section == "Statement" and len(row) >= 4 and row[2] == "Base Currency":
                     try:
-                        currency = Currency(row[3])
-                        report.deposit_currency = currency
+                        report.deposit_currency = Currency(row[3])
                     except ValueError:
                         pass
 
