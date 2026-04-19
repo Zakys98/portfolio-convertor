@@ -35,4 +35,4 @@ jobs:
         run: uv sync --group test
 
       - name: Run pytest
-        run: uv run pytest tests/ -v
+        run: uv run pytest tests/ -v --cov=src/convertor --cov-report=term-missing --cov-fail-under=75
