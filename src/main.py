@@ -5,6 +5,7 @@ import csv
 from pathlib import Path
 from typing import Any, Sequence
 
+from convertor.readers.ibkr_reader import IbkrReader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
 from convertor.constants import FileExtension, Yahoo
@@ -68,12 +69,16 @@ def yahoo_output(output_file: Path, manager: ReportManager) -> None:
         writer.writerows(manager.dump_to_yahoo())
 
 
-def get_broker(input_file: Path) -> XtbReader | Trading212Reader:
+def get_broker(input_file: Path) -> XtbReader | Trading212Reader | IbkrReader:
     match input_file.suffix.lower():
-        case FileExtension.CSV:
-            return Trading212Reader()
         case FileExtension.XLSX:
             return XtbReader()
+        case FileExtension.CSV:
+            with input_file.open("r") as f:
+                first_line = f.readline()
+            if first_line.startswith("Statement,Header"):
+                return IbkrReader()
+            return Trading212Reader()
 
     raise ValueError(f"Not supported file extension: {input_file.suffix}")
 
