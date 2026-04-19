@@ -19,27 +19,29 @@ class IbkrReader(Reader[IbkrReport]):
         try:
             return date_to_string(datetime.strptime(value.strip(), IBKR_DATETIME_FORMAT))
         except ValueError:
-            return value
+            return value.strip()
 
     def _parse_date(self, value: str) -> str:
         try:
             return date_to_string(datetime.strptime(value.strip(), IBKR_DATE_FORMAT))
         except ValueError:
-            return value
+            return value.strip()
 
     def _ticker_from_description(self, description: str) -> str:
         return description.split("(")[0].strip()
 
-    def _parse_trade(self, row: list[str]) -> IbkrStock | None:
+    def _parse_trade(self, row: list[str]) -> tuple[IbkrStock, bool] | None:
         try:
-            return IbkrStock(
+            quantity = float(row[7])
+            stock = IbkrStock(
                 ticker=row[5],
                 time=self._parse_datetime(row[6]),
-                quantity=abs(float(row[7])),
+                quantity=abs(quantity),
                 share_price=float(row[8]),
-                currency_main=Currency(row[4]),
+                currency_main=Currency(row[4].strip()),
                 total_price=abs(float(row[10])),
             )
+            return stock, quantity > 0
         except (ValueError, IndexError):
             return None
 
@@ -49,7 +51,7 @@ class IbkrReader(Reader[IbkrReport]):
                 ticker=self._ticker_from_description(row[4]),
                 time=self._parse_date(row[3]),
                 amount=float(row[5]),
-                currency=Currency(row[2]),
+                currency=Currency(row[2].strip()),
             )
         except (ValueError, IndexError):
             return None
@@ -57,7 +59,7 @@ class IbkrReader(Reader[IbkrReport]):
     def read(self, input_file: Path) -> IbkrReport:
         report = IbkrReport()
 
-        with input_file.open("r", encoding="utf-8") as f:
+        with input_file.open("r", encoding="utf-8-sig") as f:
             for row in csv.reader(f):
                 if not row:
                     continue
@@ -65,7 +67,7 @@ class IbkrReader(Reader[IbkrReport]):
                 match row[0]:
                     case "Statement" if len(row) >= 4 and row[2] == "Base Currency":
                         try:
-                            report.deposit_currency = Currency(row[3])
+                            report.deposit_currency = Currency(row[3].strip())
                         except ValueError:
                             pass
 
@@ -76,11 +78,9 @@ class IbkrReader(Reader[IbkrReport]):
                             pass
 
                     case "Trades" if len(row) >= 11 and row[1] == "Data" and row[2] == "Order" and row[3] == "Stocks":
-                        if stock := self._parse_trade(row):
-                            if float(row[7]) > 0:
-                                report.buys.append(stock)
-                            else:
-                                report.sells.append(stock)
+                        if result := self._parse_trade(row):
+                            stock, is_buy = result
+                            (report.buys if is_buy else report.sells).append(stock)
 
                     case "Dividends" if len(row) >= 6 and row[1] == "Data" and row[2] not in ("Total", "Total in CZK"):
                         if dividend := self._parse_dividend(row):
