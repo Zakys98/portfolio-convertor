@@ -1,37 +1,20 @@
 from datetime import datetime
 
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATETIME_FORMAT = "%Y-%m-%d"
 
 
 def date_to_string(date: str | datetime) -> str:
-    """
-    Convert a datetime object or string to a standardized string format.
-
-    This function normalizes date values from different sources (Excel datetime
-    objects, CSV strings) into a consistent string format. String values are
-    passed through unchanged, assuming they're already in the correct format.
-
-    Args:
-        date: A datetime object or string representing a date/time value.
-
-    Returns:
-        A string in the format "YYYY-MM-DD HH:MM:SS". If the input is already
-        a string, it is returned unchanged.
-
-    Examples:
-        >>> from datetime import datetime
-        >>> date_to_string(datetime(2023, 1, 15, 10, 30, 0))
-        '2023-01-15 10:30:00'
-        >>> date_to_string("2023-01-15 10:30:00")
-        '2023-01-15 10:30:00'
-
-    Note:
-        This function is used primarily in:
-        - XtbStock.from_dict() to convert Excel datetime objects
-        - Dividend field validator to normalize date inputs
-    """
     if isinstance(date, datetime):
         return date.strftime(DATETIME_FORMAT)
+    
+    if isinstance(date, str) and date:
+        try:
+            # Try parsing the Trading212 and older formats
+            dt = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+            return dt.strftime(DATETIME_FORMAT)
+        except ValueError:
+            pass
+            
     return date
 
 

@@ -68,7 +68,11 @@ def yahoo_output(output_file: Path, manager: ReportManager) -> None:
         writer.writerows(manager.dump_to_yahoo())
 
 
-def get_broker(input_file: Path) -> XtbReader | Trading212Reader:
+def get_broker(input_file: Path):
+    if "coinmate" in input_file.name.lower():
+        from convertor.readers.coinmate_reader import CoinmateReader
+        return CoinmateReader()
+
     match input_file.suffix.lower():
         case FileExtension.CSV:
             return Trading212Reader()

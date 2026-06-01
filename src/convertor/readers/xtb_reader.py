@@ -7,9 +7,9 @@ import openpyxl
 
 from convertor.readers.reader import Reader
 from convertor.currency import Currency
-from convertor.stocks.dividend import Dividend
-from convertor.stocks.xtb_stock import XtbStock
 from convertor.report import XtbReport
+from convertor.transaction import Transaction, TransactionType
+from convertor.utils import date_to_string
 
 
 class XtbAction(StrEnum):
@@ -29,25 +29,17 @@ class XtbAction(StrEnum):
 
 
 class XtbReader(Reader[XtbReport]):
-    # Column indices for data extraction
+    # Column indices for data extraction in OLD format
     START_COL = 2
     END_COL_OFFSET = -4
     CURRENCY_ROW_INDEX = 5
-    WORKSHEET = "CASH OPERATION HISTORY"
+    WORKSHEET_OLD = "CASH OPERATION HISTORY"
+    WORKSHEET_NEW = "Cash Operations"
 
-    # Data field indices after slicing
+    # Data field indices after slicing (OLD)
     TIME_INDEX = 0
     TICKER_INDEX = -2
     AMOUNT_INDEX = -1
-
-    # Actions that contribute to deposit total
-    DEPOSIT_ACTIONS = {
-        XtbAction.DEP,
-        XtbAction.FFI,
-        XtbAction.FFIT,
-        XtbAction.WT,
-        XtbAction.SD,
-    }
 
     def _extract_currency(self, row: tuple[Any, ...]) -> Currency:
         """Attempts to find the currency code in the specific header row."""
@@ -57,75 +49,148 @@ class XtbReader(Reader[XtbReport]):
         except (IndexError, ValueError):
             return Currency.EUR
 
-    def _parse_stock_transaction(
-        self, values: tuple[Any, ...], currency: Currency
-    ) -> XtbStock | None:
-        """Parse stock purchase or sale transaction."""
-        try:
-            # Validate required fields
-            if (
-                len(values) >= 4
-                and isinstance(values[0], datetime)
-                and isinstance(values[1], str)
-                and isinstance(values[2], str)
-                and isinstance(values[3], (int, float))
-            ):
-                # values[3] is total_price and should be a number
-                total_price = float(values[3]) if isinstance(values[3], (int, float)) else 0.0
-                return XtbStock.from_dict(
-                    (values[0], values[1], values[2], total_price), currency
-                )
-        except (ValueError, IndexError, AttributeError):
-            pass
-        return None
-
-    def _parse_dividend(self, values: tuple[Any, ...], currency: Currency) -> Dividend | None:
-        """Parse dividend transaction."""
-        try:
-            time = values[self.TIME_INDEX]
-            ticker = values[self.TICKER_INDEX]
-            amount = values[self.AMOUNT_INDEX]
-
-            if (
-                isinstance(time, datetime)
-                and ticker is not None
-                and isinstance(amount, float)
-            ):
-                return Dividend(
-                    ticker=str(ticker),
-                    time=time,
-                    amount=float(amount),
-                    currency=currency,
-                )
-        except (IndexError, ValueError):
-            pass
-        return None
-
-    def _parse_deposit(self, values: tuple[Any, ...]) -> float:
-        """Parse deposit/fee/tax transaction and return the amount."""
-        try:
-            amount = values[self.AMOUNT_INDEX]
-            if isinstance(amount, float):
-                return float(amount)
-        except IndexError:
-            pass
-        return 0.0
-
     def read(self, input_file: Path) -> XtbReport:
         workbook = openpyxl.load_workbook(input_file)
-        sheet = workbook[self.WORKSHEET]
+        if self.WORKSHEET_NEW in workbook.sheetnames:
+            return self._read_new_format(workbook, input_file)
+        elif self.WORKSHEET_OLD in workbook.sheetnames:
+            return self._read_old_format(workbook)
+        else:
+            return XtbReport()
 
+    def _read_new_format(self, workbook: openpyxl.Workbook, input_file: Path) -> XtbReport:
+        sheet = workbook[self.WORKSHEET_NEW]
         rows = list(sheet.iter_rows(values_only=True))
+        
+        # Try extract currency from filename
+        currency_str = "EUR"
+        if "_" in input_file.name:
+            c = input_file.name.split("_")[0]
+            if len(c) == 3:
+                currency_str = c
+        currency = Currency(currency_str)
+        
+        report = XtbReport()
+        
+        for row in rows[5:]: # Data starts at index 5
+            if not row or not row[0]:
+                continue
+                
+            action_raw = str(row[0]).strip().lower()
+            ticker = str(row[1]) if row[1] else None
+            time = row[3]
+            amount = float(row[4]) if isinstance(row[4], (int, float)) else 0.0
+            desc = str(row[6]) if len(row) > 6 and row[6] else None
+            
+            if not isinstance(time, datetime):
+                continue
+            date_str = date_to_string(time)
+            
+            if action_raw == "stock purchase" or action_raw == "stock sale":
+                quantity = 0.0
+                if desc:
+                    quantity_str = (
+                        desc.upper()
+                        .removeprefix("OPEN BUY")
+                        .removeprefix("CLOSE BUY")
+                        .removeprefix("OPEN SELL")
+                        .removeprefix("CLOSE SELL")
+                        .replace("@", "")
+                        .split()[0]
+                    )
+                    if "/" in quantity_str:
+                        quantity_str = quantity_str.split("/")[0]
+                    try:
+                        quantity = float(quantity_str)
+                    except ValueError:
+                        pass
+
+                total_price = abs(amount) if amount else 0.0
+                share_price = round(total_price / quantity, 2) if quantity > 0 else 0.0
+
+                tx_type = TransactionType.BUY if action_raw == "stock purchase" else TransactionType.SELL
+
+                tx = Transaction(
+                    date=date_str,
+                    type=tx_type,
+                    ticker=ticker,
+                    quantity=quantity,
+                    price=share_price,
+                    currency=currency,
+                    notes=desc
+                )
+                report.transactions.append(tx)
+
+            elif action_raw == "dividend":
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.CASH_IN,
+                    ticker=ticker,
+                    price=abs(amount),
+                    currency=currency,
+                    notes="Dividend"
+                )
+                report.transactions.append(tx)
+
+            elif "deposit" in action_raw or "withdrawal" in action_raw:
+                tx_type = TransactionType.CASH_IN if amount > 0 else TransactionType.CASH_OUT
+                tx = Transaction(
+                    date=date_str,
+                    type=tx_type,
+                    price=abs(amount),
+                    currency=currency,
+                    notes="Deposit/Withdrawal"
+                )
+                report.transactions.append(tx)
+
+            elif action_raw in ("withholding tax", "free funds interest tax"):
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.FEE,
+                    ticker=ticker,
+                    price=abs(amount),
+                    currency=currency,
+                    notes=action_raw.capitalize()
+                )
+                report.transactions.append(tx)
+
+            elif action_raw in ("stamp duty", "sec fee"):
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.FEE,
+                    ticker=ticker,
+                    price=abs(amount),
+                    currency=currency,
+                    notes=action_raw.capitalize()
+                )
+                report.transactions.append(tx)
+
+            elif action_raw == "free funds interest":
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.CASH_IN,
+                    price=abs(amount),
+                    currency=currency,
+                    notes="Free-funds Interest"
+                )
+                report.transactions.append(tx)
+
+        return report
+
+    def _read_old_format(self, workbook: openpyxl.Workbook) -> XtbReport:
+        sheet = workbook[self.WORKSHEET_OLD]
+        rows = list(sheet.iter_rows(values_only=True))
+
         if not rows:
             return XtbReport()
 
         currency = self._extract_currency(rows[self.CURRENCY_ROW_INDEX])
-        report = XtbReport(deposit_currency=currency)
+        report = XtbReport()
 
         for row in rows:
             data = row[self.START_COL : self.END_COL_OFFSET]
 
-            if not data[0] or data[0] == "Type":
+            if not data or not data[0] or data[0] == "Type":
                 continue
 
             try:
@@ -137,23 +202,105 @@ class XtbReader(Reader[XtbReport]):
 
             values = data[1:]
 
-            # Handle stock purchases
-            if action == XtbAction.SP:
-                if stock := self._parse_stock_transaction(values, currency):
-                    report.buys.append(stock)
+            if len(values) < 4:
+                continue
 
-            # Handle stock sales
-            elif action == XtbAction.SS:
-                if stock := self._parse_stock_transaction(values, currency):
-                    report.sells.append(stock)
+            time = values[self.TIME_INDEX]
+            ticker = values[self.TICKER_INDEX]
+            amount = values[self.AMOUNT_INDEX]
 
-            # Handle dividends
+            if not isinstance(time, datetime):
+                continue
+
+            date_str = date_to_string(time)
+            ticker_str = str(ticker) if ticker else None
+            amount_float = float(amount) if isinstance(amount, (int, float)) else 0.0
+
+            if action == XtbAction.SP or action == XtbAction.SS:
+                desc = values[1]
+                quantity = 0.0
+                if isinstance(desc, str):
+                    quantity_str = (
+                        desc.removeprefix("OPEN BUY")
+                        .removeprefix("CLOSE BUY")
+                        .replace("@", "")
+                        .split()[0]
+                    )
+                    if "/" in quantity_str:
+                        quantity_str = quantity_str.split("/")[0]
+                    try:
+                        quantity = float(quantity_str)
+                    except ValueError:
+                        pass
+
+                total_price = abs(amount_float) if amount_float else 0.0
+                share_price = round(total_price / quantity, 2) if quantity > 0 else 0.0
+
+                tx_type = TransactionType.BUY if action == XtbAction.SP else TransactionType.SELL
+
+                tx = Transaction(
+                    date=date_str,
+                    type=tx_type,
+                    ticker=ticker_str,
+                    quantity=quantity,
+                    price=share_price,
+                    currency=currency,
+                    notes=str(desc) if desc else None
+                )
+                report.transactions.append(tx)
+
             elif action == XtbAction.DIV:
-                if dividend := self._parse_dividend(values, currency):
-                    report.dividends.append(dividend)
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.CASH_IN,
+                    ticker=ticker_str,
+                    price=abs(amount_float),
+                    currency=currency,
+                    notes="Dividend"
+                )
+                report.transactions.append(tx)
 
-            # Handle deposits, fees, and taxes
-            elif action in self.DEPOSIT_ACTIONS:
-                report.deposit += self._parse_deposit(values)
+            elif action == XtbAction.DEP:
+                tx_type = TransactionType.CASH_IN if amount_float > 0 else TransactionType.CASH_OUT
+                tx = Transaction(
+                    date=date_str,
+                    type=tx_type,
+                    price=abs(amount_float),
+                    currency=currency,
+                    notes="Deposit/Withdrawal"
+                )
+                report.transactions.append(tx)
+
+            elif action in (XtbAction.WT, XtbAction.FFIT):
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.FEE,
+                    ticker=ticker_str,
+                    price=abs(amount_float),
+                    currency=currency,
+                    notes=str(action.value)
+                )
+                report.transactions.append(tx)
+
+            elif action in (XtbAction.SD, XtbAction.SECF):
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.FEE,
+                    ticker=ticker_str,
+                    price=abs(amount_float),
+                    currency=currency,
+                    notes=str(action.value)
+                )
+                report.transactions.append(tx)
+
+            elif action == XtbAction.FFI:
+                tx = Transaction(
+                    date=date_str,
+                    type=TransactionType.CASH_IN,
+                    price=abs(amount_float),
+                    currency=currency,
+                    notes="Free-funds Interest"
+                )
+                report.transactions.append(tx)
 
         return report
