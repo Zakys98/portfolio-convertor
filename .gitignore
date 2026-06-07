@@ -1,12 +1,40 @@
-.vscode/
-inputs/
+# Python environment and cache
 __pycache__/
-dist/
-*.egg-info/
+*.py[cod]
+*$py.class
 .venv/
-
+.env
 .python-version
-output
-out*
-.mcp.json
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
 
+# Data files (Personal exports and outputs)
+*.csv
+*.xlsx
+*.xls
+*.json
+*.zip
+*.pdf
+input-data/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Tool specific
+.mcp.json
+output/
+out*

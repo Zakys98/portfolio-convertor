@@ -3,9 +3,10 @@ from enum import StrEnum
 from pathlib import Path
 
 from convertor.readers.reader import Reader
-from convertor.stocks.trading212_stock import Trading212Stock
 from convertor.report import Trading212Report
-from convertor.stocks.dividend import Dividend
+from convertor.transaction import Transaction, TransactionType
+from convertor.currency import Currency
+from convertor.utils import date_to_string, parse_float
 
 
 class T212Action(StrEnum):
@@ -20,38 +21,6 @@ class T212Action(StrEnum):
 class Trading212Reader(Reader[Trading212Report]):
     BUY_ACTIONS = {T212Action.MB, T212Action.LB}
     SELL_ACTIONS = {T212Action.MS, T212Action.LS}
-
-    def _parse_stock_transaction(self, row: dict[str, str]) -> Trading212Stock | None:
-        """Parse stock transaction from CSV row."""
-        try:
-            return Trading212Stock.from_dict(row)
-        except (ValueError, KeyError, TypeError):
-            return None
-
-    def _parse_dividend(self, row: dict[str, str]) -> Dividend | None:
-        """Parse dividend transaction from CSV row."""
-        try:
-            stock = Trading212Stock.from_dict(row)
-            if stock.ticker and stock.time:
-                return Dividend(
-                    ticker=stock.ticker,
-                    time=stock.time,
-                    amount=stock.total_price,
-                    currency=stock.currency_order,
-                )
-        except (ValueError, KeyError, TypeError):
-            pass
-        return None
-
-    def _parse_deposit(self, row: dict[str, str]) -> float:
-        """Parse deposit transaction and return the amount."""
-        try:
-            stock = Trading212Stock.from_dict(row)
-            if stock.total_price == -1.0:
-                return 0.0
-            return stock.total_price
-        except (ValueError, KeyError, TypeError):
-            return 0.0
 
     def read(self, input_file: Path) -> Trading212Report:
         report = Trading212Report()
@@ -70,23 +39,72 @@ class Trading212Reader(Reader[Trading212Report]):
                 except ValueError:
                     continue
 
-                # Handle buy transactions
+                time = date_to_string(row.get("Time", ""))
+                ticker = row.get("Ticker", "")
+                isin = row.get("ISIN", "")
+                currency_str = row.get("Currency (Price / share)", "")
+                
+                # Disambiguate tickers listed on multiple exchanges
+                if ticker == "ASML":
+                    if isin == "USN070592100" or currency_str == "USD":
+                        ticker = "ASML.US"
+                    elif isin == "NL0010273215" or currency_str == "EUR":
+                        ticker = "ASML.AS"
+                        
+                currency = Currency(currency_str) if currency_str else None
+                
+                quantity = parse_float(row.get("No. of shares"))
+                price = parse_float(row.get("Price / share"))
+                total = parse_float(row.get("Total"))
+                
+                quantity = quantity if quantity != -1.0 else None
+                price = price if price != -1.0 else None
+                total = total if total != -1.0 else None
+
                 if action in self.BUY_ACTIONS:
-                    if stock := self._parse_stock_transaction(row):
-                        report.buys.append(stock)
+                    tx = Transaction(
+                        date=time,
+                        type=TransactionType.BUY,
+                        ticker=ticker,
+                        quantity=quantity,
+                        price=price,
+                        currency=currency,
+                        notes=action.value
+                    )
+                    report.transactions.append(tx)
 
-                # Handle sell transactions
                 elif action in self.SELL_ACTIONS:
-                    if stock := self._parse_stock_transaction(row):
-                        report.sells.append(stock)
+                    tx = Transaction(
+                        date=time,
+                        type=TransactionType.SELL,
+                        ticker=ticker,
+                        quantity=quantity,
+                        price=price,
+                        currency=currency,
+                        notes=action.value
+                    )
+                    report.transactions.append(tx)
 
-                # Handle dividends
                 elif action == T212Action.DIV:
-                    if dividend := self._parse_dividend(row):
-                        report.dividends.append(dividend)
+                    tx = Transaction(
+                        date=time,
+                        type=TransactionType.CASH_IN,
+                        ticker=ticker,
+                        price=total,
+                        currency=currency,
+                        notes="Dividend"
+                    )
+                    report.transactions.append(tx)
 
-                # Handle deposits
                 elif action == T212Action.DEP:
-                    report.deposit += self._parse_deposit(row)
+                    tx_type = TransactionType.CASH_IN if total and total > 0 else TransactionType.CASH_OUT
+                    tx = Transaction(
+                        date=time,
+                        type=tx_type,
+                        price=abs(total) if total else 0.0,
+                        currency=currency,
+                        notes="Deposit/Withdrawal"
+                    )
+                    report.transactions.append(tx)
 
         return report

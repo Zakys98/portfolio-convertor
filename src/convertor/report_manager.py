@@ -1,35 +1,52 @@
 import csv
 import json
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
-from itertools import chain
 
-from convertor.stocks.stock import Stock
+from convertor.transaction import Transaction, TransactionType
 from convertor.report import Report
 
 
 class ReportManager(BaseModel):
-    reports: list[Report[Stock]] = Field(default_factory=list)
-
-    def _filter_by_time(self, stock: dict[str, str | float]) -> str | float:
-        return stock["time"]
+    reports: list[Report] = Field(default_factory=list)
 
     def transactions(self) -> list[dict[str, Any]]:
         transactions: list[dict[str, Any]] = []
 
-        for type_, items in (
-            ("BUY", [s for r in self.reports for s in r.buys]),
-            ("SELL", [s for r in self.reports for s in r.sells]),
-            ("DIVIDEND", [s for r in self.reports for s in r.dividends]),
-        ):
-            for item in items:
-                transactions.append({"type": type_} | item.model_dump())
+        for report in self.reports:
+            for tx in report.transactions:
+                if tx.type in (TransactionType.CASH_IN, TransactionType.CASH_OUT):
+                    continue
+                    
+                dumped = tx.model_dump(exclude_none=True)
+                
+                # Ghostfolio requires price > 0
+                if dumped.get("price") == 0.0:
+                    dumped["price"] = 0.0001
+                    
+                # Ghostfolio requires fees >= 0
+                if "fees" in dumped and isinstance(dumped["fees"], (int, float)) and dumped["fees"] < 0:
+                    dumped["fees"] = 0.0
+                
+                # the template requires these columns even if empty
+                row = {
+                    "date": dumped.get("date", ""),
+                    "type": tx.type.value,
+                    "ticker": dumped.get("ticker", ""),
+                    "quantity": dumped.get("quantity", ""),
+                    "price": dumped.get("price", ""),
+                    "currency": tx.currency.value if tx.currency else "",
+                    "fees": dumped.get("fees", ""),
+                    "notes": dumped.get("notes", ""),
+                    "toCurrency": tx.toCurrency.value if tx.toCurrency else "",
+                    "toAmount": dumped.get("toAmount", ""),
+                    "isin": dumped.get("isin", "")
+                }
+                transactions.append(row)
 
-        transactions.sort(key=self._filter_by_time)
-
+        transactions.sort(key=lambda x: x["date"])
         return transactions
 
     def write_csv(self, output_file: Path) -> None:
@@ -37,41 +54,17 @@ class ReportManager(BaseModel):
         if not transactions:
             output_file.write_text("", encoding="utf-8")
             return
-        fieldnames = list(dict.fromkeys(k for row in transactions for k in row))
+            
+        fieldnames = ['date', 'type', 'ticker', 'quantity', 'price', 'currency', 'fees', 'notes', 'toCurrency', 'toAmount', 'isin']
         with output_file.open("w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(transactions)
 
-    def _deposits(self) -> dict[str, float]:
-        totals: defaultdict[str, float] = defaultdict(float)
-        for report in self.reports:
-            totals[report.deposit_currency.value] += report.deposit
-        return dict(totals)
-
     def write_json(self, output_file: Path) -> None:
-        buys = sorted(
-            [s.model_dump() for r in self.reports for s in r.buys],
-            key=self._filter_by_time,
-        )
-        sells = sorted(
-            [s.model_dump() for r in self.reports for s in r.sells],
-            key=self._filter_by_time,
-        )
-        dividends = sorted(
-            [s.model_dump() for r in self.reports for s in r.dividends],
-            key=self._filter_by_time,
-        )
-        with output_file.open("w", encoding="utf-8") as file:
-            json.dump(
-                {"buys": buys, "sells": sells, "dividends": dividends, "deposits": self._deposits()},
-                file,
-                indent=4,
-            )
+        transactions = self.transactions()
+        output_file.write_text(json.dumps(transactions, indent=4), encoding="utf-8")
 
-    def dump_to_yahoo(self)-> list[dict[str, str | float | int]]:
-        return [
-            stock.to_yahoo()
-            for report in self.reports
-            for stock in chain(report.buys, report.sells)
-        ]
+    # Yahoo format is removed or broken right now, I'll leave a stub or remove it entirely as the user just wants the template.
+    def dump_to_yahoo(self) -> list[dict[str, Any]]:
+        return []
