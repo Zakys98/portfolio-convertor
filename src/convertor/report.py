@@ -4,6 +4,7 @@ from convertor.currency import Currency
 from convertor.stocks.stock import Stock
 from convertor.stocks.xtb_stock import XtbStock
 from convertor.stocks.trading212_stock import Trading212Stock
+from convertor.stocks.ibkr_stock import IbkrStock
 from convertor.stocks.dividend import Dividend
 
 
@@ -20,4 +21,8 @@ class Trading212Report(Report[Trading212Stock]):
 
 
 class XtbReport(Report[XtbStock]):
+    pass
+
+
+class IbkrReport(Report[IbkrStock]):
     pass
