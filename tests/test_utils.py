@@ -1,13 +1,13 @@
 """
 Unit tests for utility functions in convertor.utils module.
 
-Tests cover date_to_string and parse_float functions with various
-edge cases and input scenarios.
+Tests cover date_to_string, date_to_day, and parse_float functions with
+various edge cases and input scenarios.
 """
 
 from datetime import datetime
 
-from convertor.utils import DATETIME_FORMAT, date_to_string, parse_float
+from convertor.utils import DATETIME_FORMAT, date_to_day, date_to_string, parse_float
 
 
 class TestDateToString:
@@ -77,6 +77,56 @@ class TestDateToString:
         ]
         for date_str in test_strings:
             assert date_to_string(date_str) == date_str
+
+
+class TestDateToDay:
+    """Test suite for date_to_day function."""
+
+    def test_timestamp_string_to_day(self):
+        """Test that a full timestamp is reduced to its day."""
+        assert date_to_day("2023-03-16 16:21:03") == "2023-03-16"
+
+    def test_datetime_to_day(self):
+        """Test that a datetime object is reduced to its day."""
+        assert date_to_day(datetime(2023, 3, 16, 16, 21, 3)) == "2023-03-16"
+
+    def test_date_only_string_passthrough(self):
+        """Test that an already-day-shaped string survives the fallback path."""
+        assert date_to_day("2023-03-16") == "2023-03-16"
+
+    def test_empty_string(self):
+        """Test that empty input yields empty output rather than raising."""
+        assert date_to_day("") == ""
+
+    def test_malformed_string_returns_leading_token(self):
+        """Test the best-effort fallback for unparseable input.
+
+        Reachable in practice: IbkrReader._parse_datetime falls back to the raw
+        string when strptime fails, and Trading212Stock.from_dict assigns time
+        straight from the CSV. Export must not crash on bad broker data.
+        """
+        assert date_to_day("not a date") == "not"
+
+    def test_midnight_timestamp(self):
+        """Test that a midnight timestamp keeps its own day."""
+        assert date_to_day("2024-02-29 00:00:00") == "2024-02-29"
+
+    def test_ibkr_comma_format_fallback(self):
+        """IbkrReader passes its comma-form timestamp through raw when strptime fails."""
+        assert date_to_day("2023-03-16, 16:21") == "2023-03-16"
+
+    def test_surrounding_whitespace(self):
+        """Trading212 assigns time straight from DictReader, which does not strip."""
+        assert date_to_day(" 2023-03-16 16:21:03 ") == "2023-03-16"
+
+    def test_comma_without_space(self):
+        """The comma is a separator in its own right, not just trailing punctuation.
+
+        Pins the choice to split on a [\\s,] class: a simpler strip-then-split-on-
+        space implementation passes every other test here while still returning
+        "2023-03-16,16:21:03" unchanged for this input.
+        """
+        assert date_to_day("2023-03-16,16:21:03") == "2023-03-16"
 
 
 class TestParseFloat:

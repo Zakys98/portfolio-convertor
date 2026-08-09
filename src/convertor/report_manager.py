@@ -1,14 +1,14 @@
 import csv
 import json
 from collections import defaultdict
+from itertools import chain
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel, Field
-from itertools import chain
 
-from convertor.stocks.stock import Stock
+from convertor.constants import Standard
 from convertor.report import Report
+from convertor.stocks.stock import Stock
 
 
 class ReportManager(BaseModel):
@@ -17,31 +17,24 @@ class ReportManager(BaseModel):
     def _filter_by_time(self, stock: dict[str, str | float]) -> str | float:
         return stock["time"]
 
-    def transactions(self) -> list[dict[str, Any]]:
-        transactions: list[dict[str, Any]] = []
+    def _trades(self) -> list[tuple[str, Stock]]:
+        """Every buy and sell tagged with its type, oldest first.
 
-        for type_, items in (
-            ("BUY", [s for r in self.reports for s in r.buys]),
-            ("SELL", [s for r in self.reports for s in r.sells]),
-            ("DIVIDEND", [s for r in self.reports for s in r.dividends]),
-        ):
-            for item in items:
-                transactions.append({"type": type_} | item.model_dump())
-
-        transactions.sort(key=self._filter_by_time)
-
-        return transactions
+        Dividends are excluded: the importer derives them itself, and DIVIDEND
+        is not a type it accepts.
+        """
+        trades: list[tuple[str, Stock]] = [
+            *(("BUY", stock) for report in self.reports for stock in report.buys),
+            *(("SELL", stock) for report in self.reports for stock in report.sells),
+        ]
+        trades.sort(key=lambda trade: trade[1].time)
+        return trades
 
     def write_csv(self, output_file: Path) -> None:
-        transactions = self.transactions()
-        if not transactions:
-            output_file.write_text("", encoding="utf-8")
-            return
-        fieldnames = list(dict.fromkeys(k for row in transactions for k in row))
         with output_file.open("w", newline="", encoding="utf-8") as file:
-            writer = csv.DictWriter(file, fieldnames=fieldnames, extrasaction="ignore")
+            writer = csv.DictWriter(file, Standard.to_list())
             writer.writeheader()
-            writer.writerows(transactions)
+            writer.writerows(stock.to_standard(type_) for type_, stock in self._trades())
 
     def _deposits(self) -> dict[str, float]:
         totals: defaultdict[str, float] = defaultdict(float)

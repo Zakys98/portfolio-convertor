@@ -1,6 +1,6 @@
 [project]
 name = "portfolio-convertor"
-version = "0.3.1"
+version = "0.3.2"
 description = "Magically transfers your portfolio to our standard"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -9,9 +9,12 @@ dependencies = [
     "pydantic>=2.12.5",
 ]
 
+[project.scripts]
+portfolio-convertor = "main:main"
+
 [dependency-groups]
 test = [
-    "mypy>=1.19.1",
+    "mypy>=2.3.0",
     "pytest>=9.0.2",
     "pytest-cov>=6.0.0",
     "types-openpyxl>=3.1.5.20250919",
@@ -20,3 +23,13 @@ test = [
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff.lint]
+# Ruff's default rule set is whatever the installed version decides (413 rules in
+# 0.16), so declare the selection explicitly -- otherwise a ruff release can turn
+# CI red on unchanged code. target-version is inferred from requires-python above.
+#
+# Deliberately excluded: DTZ (flake8-datetimez). Broker exports carry no timezone,
+# so naive datetimes are inherent to this domain, and DTZ accounted for 36 of the
+# 54 findings when the whole default set was active.
+select = ["E4", "E7", "E9", "F", "I", "UP"]

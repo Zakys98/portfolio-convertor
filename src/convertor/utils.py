@@ -1,6 +1,8 @@
+import re
 from datetime import datetime
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATE_FORMAT = "%Y-%m-%d"
 
 
 def date_to_string(date: str | datetime) -> str:
@@ -33,6 +35,36 @@ def date_to_string(date: str | datetime) -> str:
     if isinstance(date, datetime):
         return date.strftime(DATETIME_FORMAT)
     return date
+
+
+def date_to_day(value: str | datetime) -> str:
+    """
+    Reduce a datetime or timestamp string to its YYYY-MM-DD day.
+
+    Args:
+        value: A datetime object, or a string in "YYYY-MM-DD HH:MM:SS" format.
+
+    Returns:
+        The day as "YYYY-MM-DD". Input that cannot be parsed degrades to its
+        leading token, split on whitespace or a comma ("" for empty or
+        whitespace-only input), rather than raising, because `time` values
+        are not guaranteed well-formed: readers pass broker strings through
+        unvalidated.
+
+    Examples:
+        >>> from datetime import datetime
+        >>> date_to_day("2023-03-16 16:21:03")
+        '2023-03-16'
+        >>> date_to_day(datetime(2023, 3, 16, 16, 21, 3))
+        '2023-03-16'
+        >>> date_to_day("")
+        ''
+    """
+    text = date_to_string(value)
+    try:
+        return datetime.strptime(text, DATETIME_FORMAT).strftime(DATE_FORMAT)
+    except ValueError:
+        return re.split(r"[\s,]", text.strip(), maxsplit=1)[0]
 
 
 def parse_float(value: str | None, default: float = -1.0) -> float:

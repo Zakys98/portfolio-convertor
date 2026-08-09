@@ -1,6 +1,7 @@
 import pytest
-from convertor.readers.trading212_reader import Trading212Reader
+
 from convertor.currency import Currency
+from convertor.readers.trading212_reader import Trading212Reader
 
 
 @pytest.fixture

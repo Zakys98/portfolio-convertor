@@ -1,7 +1,9 @@
-import pytest
 from datetime import datetime
-from convertor.readers.xtb_reader import XtbReader
+
+import pytest
+
 from convertor.currency import Currency
+from convertor.readers.xtb_reader import XtbReader
 
 
 @pytest.fixture
