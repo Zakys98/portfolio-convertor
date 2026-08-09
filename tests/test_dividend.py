@@ -3,8 +3,9 @@ from datetime import datetime
 
 import pytest
 from pydantic import ValidationError
-from convertor.stocks.dividend import Dividend
+
 from convertor.currency import Currency
+from convertor.stocks.dividend import Dividend
 
 
 def test_dividend_with_currency():

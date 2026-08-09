@@ -1,6 +1,7 @@
 import pytest
-from convertor.readers.ibkr_reader import IbkrReader
+
 from convertor.currency import Currency
+from convertor.readers.ibkr_reader import IbkrReader
 
 
 def make_ibkr_csv(tmp_path, content: str):

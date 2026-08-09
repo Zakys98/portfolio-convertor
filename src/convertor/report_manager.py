@@ -1,14 +1,14 @@
 import csv
 import json
 from collections import defaultdict
+from itertools import chain
 from pathlib import Path
 
 from pydantic import BaseModel, Field
-from itertools import chain
 
 from convertor.constants import Standard
-from convertor.stocks.stock import Stock
 from convertor.report import Report
+from convertor.stocks.stock import Stock
 
 
 class ReportManager(BaseModel):

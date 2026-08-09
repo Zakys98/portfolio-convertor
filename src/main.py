@@ -2,13 +2,14 @@
 
 import argparse
 import csv
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
+from convertor.constants import FileExtension, Yahoo
 from convertor.readers.ibkr_reader import IbkrReader
 from convertor.readers.trading212_reader import Trading212Reader
 from convertor.readers.xtb_reader import XtbReader
-from convertor.constants import FileExtension, Yahoo
 from convertor.report_manager import ReportManager
 
 

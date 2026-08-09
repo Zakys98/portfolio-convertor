@@ -5,11 +5,11 @@ from typing import Any
 
 import openpyxl
 
-from convertor.readers.reader import Reader
 from convertor.currency import Currency
+from convertor.readers.reader import Reader
+from convertor.report import XtbReport
 from convertor.stocks.dividend import Dividend
 from convertor.stocks.xtb_stock import XtbStock
-from convertor.report import XtbReport
 
 
 class XtbAction(StrEnum):

@@ -3,9 +3,9 @@ from enum import StrEnum
 from pathlib import Path
 
 from convertor.readers.reader import Reader
-from convertor.stocks.trading212_stock import Trading212Stock
 from convertor.report import Trading212Report
 from convertor.stocks.dividend import Dividend
+from convertor.stocks.trading212_stock import Trading212Stock
 
 
 class T212Action(StrEnum):

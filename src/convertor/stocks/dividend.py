@@ -1,5 +1,6 @@
-from pydantic import BaseModel, computed_field, field_validator
 from datetime import datetime
+
+from pydantic import BaseModel, computed_field, field_validator
 
 from convertor.currency import Currency
 from convertor.utils import date_to_day, date_to_string

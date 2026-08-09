@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
 
 from convertor.currency import Currency
-from convertor.stocks.stock import Stock
-from convertor.stocks.xtb_stock import XtbStock
-from convertor.stocks.trading212_stock import Trading212Stock
-from convertor.stocks.ibkr_stock import IbkrStock
 from convertor.stocks.dividend import Dividend
+from convertor.stocks.ibkr_stock import IbkrStock
+from convertor.stocks.stock import Stock
+from convertor.stocks.trading212_stock import Trading212Stock
+from convertor.stocks.xtb_stock import XtbStock
 
 
 class Report[T: Stock](BaseModel):

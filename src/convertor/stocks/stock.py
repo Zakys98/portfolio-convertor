@@ -1,7 +1,7 @@
 from pydantic import BaseModel, computed_field
 
-from convertor.currency import Currency
 from convertor.constants import Standard, Yahoo
+from convertor.currency import Currency
 from convertor.utils import date_to_day
 
 
